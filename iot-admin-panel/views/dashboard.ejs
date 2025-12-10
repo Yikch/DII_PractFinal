@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión Telefonillos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand">Admin Telefonillos (Cloud)</span>
+            <a href="/logout" class="btn btn-sm btn-light">Salir</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Dispositivos Registrados</h3>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addModal">+ Nuevo</button>
+        </div>
+
+        <div class="alert alert-info">
+            <small>Los cambios realizados aquí se sincronizarán con el Edge en su próxima petición.</small>
+        </div>
+
+        <table class="table table-bordered table-hover shadow-sm bg-white">
+            <thead class="table-light">
+                <tr>
+                    <th>Dirección Física</th>
+                    <th>Alias</th>
+                    <th>MAC</th>
+                    <th>Token MQTT</th>
+                    <th>Estado (Edge)</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% devices.forEach(dev => { %>
+                <tr>
+                    <td><%= dev.physicalAddress %></td>
+                    <td><%= dev.alias %></td>
+                    <td class="font-monospace"><%= dev.macAddress %></td>
+                    <td class="font-monospace text-muted"><small><%= dev.mqttToken %></small></td>
+                    <td>
+                        <span id="status-<%= dev.macAddress %>" 
+                            class="badge <%= dev.status === 'online' ? 'bg-success' : 'bg-danger' %>">
+                            <%= dev.status.toUpperCase() %>
+                        </span>
+                    </td>
+                    
+                    <td id="time-<%= dev.macAddress %>">
+                        <%= dev.lastSync ? new Date(dev.lastSync).toLocaleTimeString() : '-' %>
+                    </td>
+
+                    <td>
+                        </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/devices" method="POST">
+                    <div class="modal-header"><h5 class="modal-title">Registrar Telefonillo</h5></div>
+                    <div class="modal-body">
+                        <div class="mb-2">
+                            <label>Dirección (Piso/Puerta)</label>
+                            <input type="text" name="physicalAddress" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label>Alias (Ej: Entrada Principal)</label>
+                            <input type="text" name="alias" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label>MAC Address (ESP32)</label>
+                            <input type="text" name="macAddress" class="form-control" placeholder="AA:BB:CC:DD:EE:FF" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Función para actualizar estados
+        async function updateDashboard() {
+            try {
+                // 1. Pedimos los datos al servidor
+                const response = await fetch('/api/live-data');
+                
+                if (!response.ok) return; // Si falla (ej: sesión expirada), no hacemos nada
+
+                const devices = await response.json();
+
+                // 2. Recorremos los datos recibidos
+                devices.forEach(dev => {
+                    // Buscamos la etiqueta por su ID único (escapando caracteres especiales si es necesario)
+                    // Nota: Las MACs suelen ser seguras, pero por si acaso usamos CSS.escape si hubiera espacios
+                    const statusBadge = document.getElementById(`status-${dev.macAddress}`);
+                    const timeCell = document.getElementById(`time-${dev.macAddress}`);
+
+                    if (statusBadge) {
+                        // Actualizar texto
+                        statusBadge.innerText = dev.status.toUpperCase();
+
+                        // Actualizar color (Clases de Bootstrap)
+                        if (dev.status === 'online') {
+                            statusBadge.classList.remove('bg-danger');
+                            statusBadge.classList.add('bg-success');
+                        } else {
+                            statusBadge.classList.remove('bg-success');
+                            statusBadge.classList.add('bg-danger');
+                        }
+                    }
+
+                    if (timeCell && dev.lastSync) {
+                        // Actualizar la hora
+                        timeCell.innerText = new Date(dev.lastSync).toLocaleTimeString();
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error actualizando dashboard:", error);
+            }
+        }
+
+        // 3. Configurar el intervalo
+        // Ejecutar cada 5000 milisegundos (5 segundos)
+        setInterval(updateDashboard, 5000);
+    </script>
+</body>
+</html>

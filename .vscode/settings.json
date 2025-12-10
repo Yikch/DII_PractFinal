@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/7af4194e-cdc0-40e0-b6ea-54de9315f423/resourceGroups/PractFinal_group/providers/Microsoft.Web/sites/iot-admin-panel",
+    "appService.deploySubpath": "iot-admin-panel"
+}

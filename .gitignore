@@ -1,1 +1,6 @@
 node_modules
+telefonillo_inteligente/build/
+telefonillo_inteligente/managed_components/
+telefonillo_inteligente/dependecies.lock
+telefonillo_inteligente/.devcontainer
+telefonillo_inteligente/.vscode

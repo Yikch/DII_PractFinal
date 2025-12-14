@@ -22,17 +22,26 @@
 
 static char *TAG = "MAIN";
 
-//wifi_credentials_t wifi_credentials;
+// wifi_credentials_t wifi_credentials;
 
 void app_main(void)
 {
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    // ESP_ERROR_CHECK(softAP_provision_init(NULL, NULL));
-    // wifi_credentials = get_wifi_credentials();
-    camera_init();
-    face_recognition_init();
-    green_led_init();
+    ESP_ERROR_CHECK(camera_init());
+    ESP_ERROR_CHECK(face_recognition_init());
+    ESP_ERROR_CHECK(green_led_init());
 
     green_led_off();
+    while (1)
+    {
+        camera_fb_t *fb = get_capture();
+        //ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", fb->len);
+        float score = recognize_face(fb->buf, fb->len);
+
+        if(score > 0.0f){ESP_LOGI(TAG, "score: %f", score);}
+
+        free_camera_buffer(fb);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }

@@ -2,7 +2,7 @@
 #define CAMERA_H
 #include "esp_camera.h"
 
-#define CAM_PIN_PWDN 38
+#define CAM_PIN_PWDN -1
 #define CAM_PIN_RESET -1   //software reset will be performed
 #define CAM_PIN_VSYNC 6
 #define CAM_PIN_HREF 7
@@ -21,6 +21,8 @@
 
 esp_err_t camera_init(void);
 
-esp_err_t get_capture(camera_fb_t *fb);
+camera_fb_t *get_capture(void);
+
+void free_camera_buffer(camera_fb_t *fb);
 
 #endif

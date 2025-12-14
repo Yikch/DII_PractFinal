@@ -8,7 +8,7 @@ esp_err_t green_led_init(void)
     // Configuración de la estructura del GPIO
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_DISABLE,               // Sin interrupción
-        .mode = GPIO_MODE_OUTPUT,                     // Modo de salida
+        .mode = GPIO_MODE_OUTPUT_OD,                  // GPIO3 LED: open-drain, lógica normal según HW
         .pin_bit_mask = (1ULL << GREEN_LED_GPIO_NUM), // Máscara de bits para el GPIO3
         .pull_down_en = GPIO_PULLDOWN_DISABLE,        // Sin pull-down
         .pull_up_en = GPIO_PULLUP_DISABLE,            // Sin pull-up

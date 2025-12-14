@@ -15,6 +15,7 @@
 #include "esp_err.h"
 #include "camera.h"
 #include "face_recognition.h"
+#include "green_led.h"
 #include <string.h>
 
 #define PROVISIONING_SOFTAP
@@ -31,4 +32,7 @@ void app_main(void)
     // wifi_credentials = get_wifi_credentials();
     camera_init();
     face_recognition_init();
+    green_led_init();
+
+    green_led_off();
 }

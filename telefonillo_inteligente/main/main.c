@@ -19,6 +19,7 @@
 #include "green_led.h"
 #include "wifi.h"
 #include "button_handler.h"
+#include "cliente_mqtt.h"
 #include <string.h>
 
 #define PROVISIONING_SOFTAP
@@ -80,6 +81,9 @@ static void capture_send_image(void *arg)
         if (score > 0.7f)
         {
             ESP_LOGI(TAG, "Foto lista para envio con score: %.2f", score);
+            // A modo de ejemplo
+            // Envia un mensaje al TOPIC "Telefonillos/FaceDetectedAlarm"
+            Mqtt_send_data();
             break;
         }
 
@@ -122,6 +126,11 @@ void app_main(void)
     else
     {
         ESP_LOGI(TAG, "Conectado a la red wifi.");
+
+        // Si estamos conectados al Wifi, lanzar el cliente MQTT.
+        // La URL del broker la obtenemos de la NVS tras el aprovisionamiento
+        //  o desde el MenuConfig si no se indicó por provisionamiento
+        Mqtt_client_start(&my_nvs_hnd);
     }
 
     ESP_ERROR_CHECK(camera_init());

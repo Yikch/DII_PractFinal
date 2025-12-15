@@ -9,7 +9,7 @@ router.get('/sync-devices', requireEdgeApiKey, async (req, res) => {
     try {
         // Devolvemos solo lo que el broker MQTT necesita saber
         const devices = await Device.findAll({
-            attributes: ['macAddress', 'mqttToken']
+            attributes: ['macAddress', 'mqttToken', 'telegramAddress']
         });
         res.json(devices);
     } catch (error) {

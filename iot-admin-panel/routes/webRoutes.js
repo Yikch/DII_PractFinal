@@ -15,7 +15,7 @@ router.post('/devices', requireAdmin, async (req, res) => {
     try {
         await Device.create({
             alias: req.body.alias,
-            physicalAddress: req.body.physicalAddress,
+            telegramAddress: req.body.telegramAddress,
             macAddress: req.body.macAddress,
             mqttToken: uuidv4() // Generamos un token seguro automáticamente
         });

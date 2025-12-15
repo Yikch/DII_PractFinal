@@ -11,7 +11,7 @@ const Device = sequelize.define('Device', {
         type: DataTypes.STRING, 
         allowNull: false 
     },
-    physicalAddress: {
+    telegramAddress: {
         type: DataTypes.STRING,
         allowNull: false
     },

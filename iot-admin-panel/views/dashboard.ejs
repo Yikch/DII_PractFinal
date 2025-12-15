@@ -26,18 +26,17 @@
         <table class="table table-bordered table-hover shadow-sm bg-white">
             <thead class="table-light">
                 <tr>
-                    <th>Dirección Física</th>
+                    <th>Dirección Telegram</th>
                     <th>Alias</th>
                     <th>MAC</th>
                     <th>Token MQTT</th>
                     <th>Estado (Edge)</th>
-                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
                 <% devices.forEach(dev => { %>
                 <tr>
-                    <td><%= dev.physicalAddress %></td>
+                    <td><%= dev.telegramAddress %></td>
                     <td><%= dev.alias %></td>
                     <td class="font-monospace"><%= dev.macAddress %></td>
                     <td class="font-monospace text-muted"><small><%= dev.mqttToken %></small></td>
@@ -46,10 +45,6 @@
                             class="badge <%= dev.status === 'online' ? 'bg-success' : 'bg-danger' %>">
                             <%= dev.status.toUpperCase() %>
                         </span>
-                    </td>
-                    
-                    <td id="time-<%= dev.macAddress %>">
-                        <%= dev.lastSync ? new Date(dev.lastSync).toLocaleTimeString() : '-' %>
                     </td>
 
                     <td>
@@ -67,11 +62,11 @@
                     <div class="modal-header"><h5 class="modal-title">Registrar Telefonillo</h5></div>
                     <div class="modal-body">
                         <div class="mb-2">
-                            <label>Dirección (Piso/Puerta)</label>
-                            <input type="text" name="physicalAddress" class="form-control" required>
+                            <label>Dirección (Telegram)</label>
+                            <input type="text" name="telegramAddress" class="form-control" required>
                         </div>
                         <div class="mb-2">
-                            <label>Alias (Ej: Entrada Principal)</label>
+                            <label>Alias (Ej: Dispositivo 1)</label>
                             <input type="text" name="alias" class="form-control" required>
                         </div>
                         <div class="mb-2">

@@ -18,6 +18,7 @@
 #include "face_recognition.h"
 #include "green_led.h"
 #include "wifi.h"
+#include "button_handler.h"
 #include <string.h>
 
 #define PROVISIONING_SOFTAP
@@ -26,6 +27,7 @@ static char *TAG = "MAIN";
 
 // wifi_credentials_t wifi_credentials;
 nvs_handle_t my_nvs_hnd;
+EventGroupHandle_t adc_event_group;
 
 esp_err_t initNVS()
 {
@@ -60,6 +62,44 @@ esp_err_t initNVS()
     return err;
 }
 
+static void capture_send_image(void *arg)
+{
+    green_led_on();
+    for (int i = 0; i < 10; i++)
+    {
+        camera_fb_t *fb = get_capture();
+        if (!fb)
+        {
+            vTaskDelay(pdMS_TO_TICKS(200));
+            continue;
+        }
+
+        ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", fb->len);
+        float score = recognize_face(fb->buf, fb->len);
+        free_camera_buffer(fb);
+        if (score > 0.7f)
+        {
+            ESP_LOGI(TAG, "Foto lista para envio con score: %.2f", score);
+            break;
+        }
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    green_led_off();
+    xEventGroupClearBits(adc_event_group, ADC_HANDLER_BUSY_BIT);
+
+    vTaskDelete(NULL);
+}
+
+static void single_press_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
+{
+    if (id == ADC_BUTTON_SINGLE_PRESS_UP)
+    {
+        xEventGroupSetBits(adc_event_group, ADC_HANDLER_BUSY_BIT);
+        xTaskCreate(capture_send_image, "capture_send_image", 4096, NULL, 5, NULL);
+    }
+}
+
 void app_main(void)
 {
     // Inicializar NVS
@@ -69,7 +109,9 @@ void app_main(void)
         return;
     }
 
+    adc_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_handler_register(ADC_BUTTON_EVENTS, ADC_BUTTON_SINGLE_PRESS_UP, &single_press_handler, NULL));
 
     // Inicializar wifi.
     // El handler de la NVS es para que se guarde la URL del Broker de MQTT y no se pierda tras reiniciar la placa
@@ -85,17 +127,7 @@ void app_main(void)
     ESP_ERROR_CHECK(camera_init());
     ESP_ERROR_CHECK(face_recognition_init());
     ESP_ERROR_CHECK(green_led_init());
-
     green_led_off();
-    while (1)
-    {
-        camera_fb_t *fb = get_capture();
-        //ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", fb->len);
-        float score = recognize_face(fb->buf, fb->len);
 
-        if(score > 0.0f){ESP_LOGI(TAG, "score: %f", score);}
-
-        free_camera_buffer(fb);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
+    ESP_ERROR_CHECK(button_handler_init(adc_event_group));
 }

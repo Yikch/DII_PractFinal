@@ -21,7 +21,7 @@ esp_err_t face_recognition_init(void)
     if (detect == nullptr)
     {
         ESP_LOGE(TAG, "ERROR: Falló la asignación de memoria para HumanFaceDetect.");
-        return ESP_ERR_NO_MEM;
+        return ESP_FAIL;
     }
 
     ESP_LOGI(TAG, "Detector de Rostros inicializado exitosamente.");

@@ -87,6 +87,7 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     esp_mqtt_client_config_t mqtt_cfg = {};
     mqtt_cfg.broker.address.uri = global_broker_url;
     mqtt_cfg.broker.address.port = 1883;
+    mqtt_cfg.buffer.out_size = 15360;
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_register_event(mqtt_client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
@@ -95,13 +96,11 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     ESP_LOGI(TAG, "MQTT client started");
 }
 
-void Mqtt_send_data()
+void Mqtt_send_data(uint8_t* buf, size_t buf_len)
 {
-    char msg[128];
-    snprintf(msg, sizeof(msg), "CARA DETECTADA");
 
-    esp_mqtt_client_publish(mqtt_client, CONFIG_ALARM_TOPIC, msg, 0, 1, 0);
-    ESP_LOGI(TAG, "Alarma enviada por MQTT al broker %s:%d en TOPIC %s: %s", global_broker_url, 1883, CONFIG_ALARM_TOPIC, msg);
+    esp_mqtt_client_publish(mqtt_client, CONFIG_ALARM_TOPIC, (const char*)buf, buf_len, 1, 0);
+    ESP_LOGI(TAG, "Alarma enviada por MQTT al broker %s:%d en TOPIC %s: %d bytes", global_broker_url, 1883, CONFIG_ALARM_TOPIC, buf_len);
 }
 
 void Mqtt_client_free()

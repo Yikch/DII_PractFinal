@@ -1,0 +1,9 @@
+menu "Telefonillo ID Configuration"
+
+    config DEVICE_NAME
+        string "Device Name"
+        default "Telefonillo1"
+        help
+            Name or ID of the device.
+
+endmenu

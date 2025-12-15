@@ -4,12 +4,17 @@
 
 static const char *TAG = "MQTT";
 
+// Plantilla base del topic
+// El topic final se construye usando las macros CONFIG_ALARM_TOPIC/CONFIG_DEVICE_NAME
+#define BASE_TOPIC "%s/%s"
+
 nvs_handle_t *mqtt_nvs_hnd_ptr = NULL;
 
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 bool mqtt_connected = false;
 
 static char *global_broker_url = NULL;
+static char *global_topic = NULL;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -22,6 +27,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         mqtt_connected = true;
+        break;
+    case MQTT_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
         break;
     default:
         break;
@@ -93,14 +101,29 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     esp_mqtt_client_register_event(mqtt_client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
     esp_mqtt_client_start(mqtt_client);
 
+    // *** Crear el topic para enviar los datos del nodo ***
+    required_size = snprintf(NULL, 0, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
+    if (required_size < 0)
+    {
+        ESP_LOGE(TAG, "Error al crear el topic de publicacion");
+    }
+    else
+    {
+        global_topic = malloc(required_size + 1);
+        if (global_topic != NULL)
+        {
+            snprintf(global_topic, required_size + 1, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
+            ESP_LOGI(TAG, "Topic de publicaciones del telefonillo: %s", global_topic);
+        }
+    }
+
     ESP_LOGI(TAG, "MQTT client started");
 }
 
-void Mqtt_send_data(uint8_t* buf, size_t buf_len)
+void Mqtt_send_data(uint8_t *buf, size_t buf_len)
 {
-
-    esp_mqtt_client_publish(mqtt_client, CONFIG_ALARM_TOPIC, (const char*)buf, buf_len, 1, 0);
-    ESP_LOGI(TAG, "Alarma enviada por MQTT al broker %s:%d en TOPIC %s: %d bytes", global_broker_url, 1883, CONFIG_ALARM_TOPIC, buf_len);
+    esp_mqtt_client_publish(mqtt_client, global_topic, (const char *)buf, buf_len, 1, 0);
+    ESP_LOGI(TAG, "Imagen enviada por MQTT al broker %s:%d en TOPIC %s: %d bytes", global_broker_url, 1883, global_topic, buf_len);
 }
 
 void Mqtt_client_free()
@@ -110,4 +133,7 @@ void Mqtt_client_free()
         ESP_LOGE(TAG, "Error stoping mqtt client: %s", esp_err_to_name(errcode));
 
     esp_mqtt_client_destroy(mqtt_client);
+
+    free(global_topic);
+    free(global_broker_url);
 }

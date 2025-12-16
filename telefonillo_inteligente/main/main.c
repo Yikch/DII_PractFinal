@@ -76,6 +76,7 @@ static void capture_send_image(void *arg)
             vTaskDelay(pdMS_TO_TICKS(200));
             continue;
         }
+
         lcd_s3_eye_draw_jpeg(fb->buf, fb->len);
         ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", fb->len);
         float score = recognize_face(fb->buf, fb->len);
@@ -86,7 +87,7 @@ static void capture_send_image(void *arg)
             // A modo de ejemplo
             // Envia un mensaje al TOPIC "Telefonillos/FaceDetectedAlarm"
             Mqtt_send_data(fb->buf, fb->len);
-
+            free_camera_buffer(fb);
             break;
         }
         free_camera_buffer(fb);

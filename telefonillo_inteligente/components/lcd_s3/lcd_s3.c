@@ -102,15 +102,6 @@ void lcd_s3_eye_draw_frame(const void *buffer)
     // Hacemos un cast a uint8_t para manipular bytes
     uint8_t *my_buf = (uint8_t *)buffer;
     
-    // --- PARCHE SOFTWARE: SWAP DE BYTES ---
-    // Invertimos cada pareja de bytes (Low <-> High)
-    // OJO: Esto modifica el buffer de la cámara directamente.
-    for (int i = 0; i < LCD_WIDTH * LCD_HEIGHT * 2; i += 2) {
-        uint8_t temp = my_buf[i];
-        my_buf[i] = my_buf[i+1];
-        my_buf[i+1] = temp;
-    }
-    // ---------------------------------------
 
     // Enviamos por bloques...
     uint16_t *p_buffer = (uint16_t *)my_buf;
@@ -127,58 +118,79 @@ esp_err_t lcd_s3_eye_draw_jpeg(const uint8_t *jpg_data, size_t jpg_len)
 {
     esp_err_t ret = ESP_OK;
 
-    // 1. ASIGNAR MEMORIA PARA LA SALIDA (RGB565)
-    // Calculamos el tamaño máximo necesario: Ancho * Alto * 2 bytes por píxel.
-    // Usamos PSRAM (SPIRAM) porque ~115KB es mucho para la RAM interna.
-    size_t out_buffer_size = LCD_WIDTH * LCD_HEIGHT * 2;
-    uint8_t *out_buffer = (uint8_t *)heap_caps_malloc(out_buffer_size, MALLOC_CAP_SPIRAM);
+    esp_jpeg_image_output_t outimg_info;
 
-    if (out_buffer == NULL) {
-        ESP_LOGE(TAG, "No hay memoria suficiente para descomprimir el JPEG");
+    int src_w = 320;
+    int src_h = 240;
+
+    size_t full_buffer_size = src_w * src_h * 2;
+    uint8_t *full_buffer = (uint8_t *)heap_caps_malloc(full_buffer_size, MALLOC_CAP_SPIRAM);
+
+    if (!full_buffer) {
+        ESP_LOGE(TAG, "No hay RAM para descomprimir imagen completa");
         return ESP_ERR_NO_MEM;
     }
 
-    // 2. CONFIGURACIÓN DEL DECODIFICADOR
+    // 1. CONFIGURACIÓN DEL DECODIFICADOR
+    // Primero solo configuramos, no asignamos buffer de salida todavía
     esp_jpeg_image_cfg_t jpeg_cfg = {
         .indata = (uint8_t *)jpg_data,
         .indata_size = jpg_len,
-        // --- CAMBIO CLAVE: Pasamos el buffer que acabamos de crear ---
-        .outbuf = out_buffer,       
-        .outbuf_size = out_buffer_size,
-        // ------------------------------------------------------------
+        .outbuf = full_buffer,
+        .outbuf_size = full_buffer_size,
         .out_format = JPEG_IMAGE_FORMAT_RGB565,
         .out_scale = JPEG_IMAGE_SCALE_0,
         .flags = {
-            .swap_color_bytes = 0,
+            .swap_color_bytes = 1, // Ajusta a 1 si los colores salen invertidos
         }
     };
 
-    esp_jpeg_image_output_t outimg;
-
-    // 3. DECODIFICAR
-    // El decodificador leerá 'indata' y escribirá los píxeles en 'outbuf' (nuestro out_buffer)
-    ret = esp_jpeg_decode(&jpeg_cfg, &outimg);
-
+    // 2. OBTENER INFORMACIÓN DE LA IMAGEN (SIN DECODIFICAR AÚN)
+    
+    ret = esp_jpeg_decode(&jpeg_cfg, &outimg_info);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Error al decodificar JPEG: %d", ret);
-        heap_caps_free(out_buffer); // Importante: liberar si falla
+        heap_caps_free(full_buffer);
         return ret;
     }
 
-    // 4. VERIFICACIÓN DE TAMAÑO
-    // 'outimg' solo nos dice cuánto ocupó la imagen real
-    if (outimg.width > LCD_WIDTH || outimg.height > LCD_HEIGHT) {
-        ESP_LOGW(TAG, "Imagen JPEG (%dx%d) excede pantalla", outimg.width, outimg.height);
+    // Si la imagen es 320 de ancho, vamos a recortar el centro a 240
+    if (src_w == 320 && src_h == 240) {
+        
+        int dst_w = 240;
+        int dst_h = 240;
+        int offset_x = (src_w - dst_w) / 2; // (320 - 240) / 2 = 40 pixels a la izq
+        
+        // Buffer final para la pantalla
+        size_t crop_size = dst_w * dst_h * 2;
+        uint16_t *crop_buffer = (uint16_t *)heap_caps_malloc(crop_size, MALLOC_CAP_SPIRAM);
+
+        if (crop_buffer) {
+            uint16_t *src_u16 = (uint16_t *)full_buffer;
+            
+            // Bucle mágico: Copiar fila a fila
+            for (int y = 0; y < dst_h; y++) {
+                // Puntero origen: Inicio + (FilaActual * AnchoTotal) + MargenIzquierdo
+                uint16_t *line_src = src_u16 + (y * src_w) + offset_x;
+                
+                // Puntero destino: Inicio + (FilaActual * AnchoDestino)
+                uint16_t *line_dst = crop_buffer + (y * dst_w);
+
+                // Copiamos solo los 240 píxeles centrales de esa fila
+                memcpy(line_dst, line_src, dst_w * 2); 
+            }
+
+            // Pintamos el buffer recortado
+            lcd_s3_eye_draw_frame(crop_buffer);
+            
+            heap_caps_free(crop_buffer);
+        }
+        
+    } else {
+        // Si ya es 240x240 o cualquier otro tamaño, la pintamos tal cual
+        lcd_s3_eye_draw_frame(full_buffer);
     }
 
-    // 5. PINTAR EN LCD
-    // Usamos 'out_buffer' que es donde están los datos crudos ahora.
-    // NO usamos outimg.data (porque no existe en el struct).
-    lcd_s3_eye_draw_frame(out_buffer);
-
     // 6. LIMPIEZA
-    // Liberamos el buffer que nosotros mismos creamos al principio
-    heap_caps_free(out_buffer);
-
+    heap_caps_free(full_buffer);
     return ESP_OK;
 }

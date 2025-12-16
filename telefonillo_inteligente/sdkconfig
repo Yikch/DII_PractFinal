@@ -596,10 +596,16 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
+# Telefonillo ID Configuration
+#
+CONFIG_DEVICE_NAME="Telefonillo1"
+# end of Telefonillo ID Configuration
+
+#
 # MQTT Broker Configuration
 #
-CONFIG_BROKER_URL="mqtt://10.130.181.226"
-CONFIG_ALARM_TOPIC="camara/imagen"
+CONFIG_BROKER_URL="mqtt://10.213.20.162"
+CONFIG_ALARM_TOPIC="Telefonillos/FaceDetectedAlarm"
 # end of MQTT Broker Configuration
 
 #

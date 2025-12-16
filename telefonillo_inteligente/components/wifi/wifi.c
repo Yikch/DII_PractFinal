@@ -151,8 +151,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         case WIFI_PROV_END:
             /* De-initialize manager once provisioning is finished */
             wifi_prov_mgr_deinit();
-            // Notificar a la funcion de que el provisionamiento termino y que pueda retornar
-            xEventGroupSetBits(s_wifi_event_group, WIFI_PROV_DONE_BIT);
+            // // Notificar a la funcion de que el provisionamiento termino y que pueda retornar
+            // xEventGroupSetBits(s_wifi_event_group, WIFI_PROV_DONE_BIT);
             break;
         default:
             break;
@@ -169,6 +169,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             break;
         case WIFI_EVENT_STA_CONNECTED: // Modo STA WiFi conectado
             ESP_LOGE(TAG, "Evento WIFI_EVENT_STA_CONNECTED recibido");
+            // Notificar a la funcion de que estamos conectados y puede retornar
+            xEventGroupSetBits(s_wifi_event_group, WIFI_PROV_DONE_BIT);
             break;
         case WIFI_EVENT_STA_DISCONNECTED: // Modo STA WiFi desconectado,
                                           // reintentamos conexion
@@ -373,6 +375,12 @@ esp_err_t wifi_init(nvs_handle_t *nvs_hnd)
             return err;
         }
         // La llamada a esp_wifi_connect() se hace desde el event_handler del main, tras el evento WIFI_EVENT_STA_START
+
+        // Esperamos hasta que nos indiquen que estamos conectados para retornar
+        xEventGroupWaitBits(s_wifi_event_group, WIFI_PROV_DONE_BIT,
+                            pdTRUE,         // limpiar el bit al retornar
+                            pdFALSE,        // esperar cualquier bit
+                            portMAX_DELAY); // bloquea indefinidamente
     }
     return err;
 }

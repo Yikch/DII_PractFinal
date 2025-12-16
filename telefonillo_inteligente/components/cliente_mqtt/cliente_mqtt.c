@@ -1,6 +1,7 @@
 #include "cliente_mqtt.h"
 #include "esp_log.h"
 #include <cJSON.h>
+#include "mbedtls/base64.h"
 
 static const char *TAG = "MQTT";
 
@@ -76,8 +77,9 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     {
         ESP_LOGE(TAG, "URL del broker no provisionada por SoftAP!\n"
                       "Provisione de nuevo con el parametro --customdata \"url_servidor_mqtt\" para usar una URL diferente\n"
-                      "Usando URL por defecto %s",
-                 CONFIG_BROKER_URL);
+                      "Usando URL por defecto %s:%d",
+                 CONFIG_BROKER_URL,
+                 CONFIG_BROKER_PORT);
 
         required_size = strlen(CONFIG_BROKER_URL);
         global_broker_url = malloc(required_size + 1);
@@ -94,7 +96,7 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
 
     esp_mqtt_client_config_t mqtt_cfg = {};
     mqtt_cfg.broker.address.uri = global_broker_url;
-    mqtt_cfg.broker.address.port = 1883;
+    mqtt_cfg.broker.address.port = CONFIG_BROKER_PORT;
     mqtt_cfg.buffer.out_size = 15360;
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
@@ -120,10 +122,76 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     ESP_LOGI(TAG, "MQTT client started");
 }
 
-void Mqtt_send_data(uint8_t *buf, size_t buf_len)
+void Mqtt_send_base64_image(const uint8_t *image_data, size_t image_size)
 {
-    esp_mqtt_client_publish(mqtt_client, global_topic, (const char *)buf, buf_len, 1, 0);
-    ESP_LOGI(TAG, "Imagen enviada por MQTT al broker %s:%d en TOPIC %s: %d bytes", global_broker_url, 1883, global_topic, buf_len);
+    char *base64_encoded_str = NULL;
+    size_t len_requerida = 0; // Usado para calcular el tamaño de malloc
+    size_t len_escrita = 0;   // Usado para la longitud real de la cadena (el payload)
+    int ret;                  // Código de retorno de la función mbedtls
+
+    // --- 1. Calcular la longitud de salida requerida ---
+    // Llamamos a la función con el buffer de salida NULL o tamaño 0.
+    // El segundo parámetro (len_requerida) devolverá el tamaño necesario.
+    ret = mbedtls_base64_encode(
+        NULL,           // Output buffer: NULL
+        0,              // Output buffer size: 0
+        &len_requerida, // OUT: Aquí se guarda el tamaño que necesitamos
+        image_data,     // Input data
+        image_size      // Input data size
+    );
+
+    if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
+    {
+        // En este paso, el error esperado es BUFFER_TOO_SMALL, lo cual
+        // nos dice que se calculó la longitud correctamente. Si es otro error, fallamos.
+        ESP_LOGE(TAG, "Error 1 al calcular longitud Base64: 0x%x", ret);
+        return;
+    }
+
+    // Si la imagen es vacía, salimos
+    if (len_requerida == 0)
+    {
+        ESP_LOGE(TAG, "La imagen está vacía.");
+        return;
+    }
+
+    // --- 2. Asignar memoria dinámica para la cadena Base64 ---
+    // La longitud requerida de mbedtls_base64_encode YA INCLUYE el terminador '\0'.
+    // Por lo tanto, no necesitamos añadir un '+ 1'.
+    base64_encoded_str = (char *)malloc(len_requerida);
+
+    if (base64_encoded_str == NULL)
+    {
+        ESP_LOGE(TAG, "Error: No se pudo asignar memoria para Base64.");
+        return;
+    }
+
+    // --- 3. Codificar la imagen a Base64 ---
+    // Llama a la función de nuevo, esta vez con el buffer y el tamaño correctos.
+    ret = mbedtls_base64_encode(
+        (unsigned char *)base64_encoded_str, // Output buffer
+        len_requerida,                       // Output buffer size
+        &len_escrita,                        // OUT: Longitud REAL escrita (sin el '\0')
+        image_data,                          // Input data
+        image_size                           // Input data size
+    );
+
+    if (ret != 0)
+    {
+        ESP_LOGE(TAG, "Error 2 al codificar Base64: 0x%x", ret);
+        free(base64_encoded_str);
+        return;
+    }
+
+    // --- 4. Publicar la cadena codificada ---
+    int msg_id = esp_mqtt_client_publish(mqtt_client, global_topic, base64_encoded_str, len_escrita, 1, 0);
+    ESP_LOGI(TAG, "Imagen Base64 enviada por MQTT al broker %s:%d en TOPIC %s", global_broker_url, CONFIG_BROKER_PORT, global_topic);
+    ESP_LOGI(TAG, "Longitud: %zu bytes. ID: %d", len_escrita, msg_id);
+
+    ESP_LOGI(TAG, "Imagen Base64 publicada. Longitud: %zu bytes. ID: %d", len_escrita, msg_id);
+
+    // --- 5. Liberar memoria asignada ---
+    free(base64_encoded_str);
 }
 
 void Mqtt_client_free()

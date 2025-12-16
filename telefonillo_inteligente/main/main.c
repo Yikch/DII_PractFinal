@@ -80,13 +80,14 @@ static void capture_send_image(void *arg)
         lcd_s3_eye_draw_jpeg(fb->buf, fb->len);
         ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", fb->len);
         float score = recognize_face(fb->buf, fb->len);
-        
+
         if (score > 0.7f)
         {
             ESP_LOGI(TAG, "Foto lista para envio con score: %.2f", score);
             // A modo de ejemplo
             // Envia un mensaje al TOPIC "Telefonillos/FaceDetectedAlarm"
-            Mqtt_send_data(fb->buf, fb->len);
+            // Mqtt_send_data(fb->buf, fb->len);
+            Mqtt_send_base64_image(fb->buf, fb->len);
             free_camera_buffer(fb);
             break;
         }
@@ -138,7 +139,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "Iniciando LCD...");
-    if (lcd_s3_eye_init() != ESP_OK) {
+    if (lcd_s3_eye_init() != ESP_OK)
+    {
         ESP_LOGE(TAG, "Fallo LCD");
         return;
     }

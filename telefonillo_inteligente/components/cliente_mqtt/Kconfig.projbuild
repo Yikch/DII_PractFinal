@@ -5,6 +5,13 @@ menu "MQTT Broker Configuration"
         default ""
         help
             URL of the broker to connect to
+    
+    config BROKER_PORT
+        int "Broker PORT"
+        default 1883
+        range 1 65535
+        help
+            Port of the broker to connect to
 
     config ALARM_TOPIC
         string "Alarm Topic"

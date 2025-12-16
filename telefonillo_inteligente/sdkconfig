@@ -598,8 +598,8 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # MQTT Broker Configuration
 #
-CONFIG_BROKER_URL="mqtt://192.168.1.1"
-CONFIG_ALARM_TOPIC="Telefonillos/FaceDetectedAlarm"
+CONFIG_BROKER_URL="mqtt://10.130.181.226"
+CONFIG_ALARM_TOPIC="camara/imagen"
 # end of MQTT Broker Configuration
 
 #

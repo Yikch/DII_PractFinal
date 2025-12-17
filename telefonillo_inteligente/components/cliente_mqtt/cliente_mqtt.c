@@ -16,6 +16,7 @@ bool mqtt_connected = false;
 
 static char *global_broker_url = NULL;
 static char *global_topic = NULL;
+static int global_port;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -37,16 +38,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
-void Mqtt_client_start(nvs_handle_t *nvs_hnd)
+void get_broker_url(void)
 {
     esp_err_t err = ESP_OK;
     size_t required_size = 0;
 
-    mqtt_nvs_hnd_ptr = nvs_hnd;
-
-    ESP_LOGI(TAG, "Iniciando cliente MQTT....");
-
-    // Obtener URL del Broker desde la NVS si se indicó por provisionamiento SoftAP
     err = nvs_get_str(*mqtt_nvs_hnd_ptr, "MQTT_BROKER_URL", NULL, &required_size);
     if (err == ESP_OK)
     {
@@ -93,10 +89,107 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     { // Otro error, notificar
         ESP_LOGE(TAG, "Error leyendo clave MQTT_BROKER_URL de la NVS: %s", esp_err_to_name(err));
     }
+}
+
+void get_broker_port(void){
+    esp_err_t err = ESP_OK;
+    int32_t temp_valor;
+
+    err = nvs_get_i32(*mqtt_nvs_hnd_ptr, "MQTT_PORT", &temp_valor);
+    if (err == ESP_OK)
+    {
+        global_port = (int) temp_valor;
+        ESP_LOGI(TAG, "PORT almacenado en NVS = %i", global_port);
+    }
+    else{
+        global_port = CONFIG_BROKER_PORT;
+        ESP_LOGE(TAG, "Error de puerto desde NVS, usando puerto del config. %i", global_port);
+    }
+}
+
+void get_device_topic(void)
+{
+    esp_err_t err = ESP_OK;
+    size_t required_size = 0;
+
+    err = nvs_get_str(*mqtt_nvs_hnd_ptr, "MQTT_TOPIC", NULL, &required_size);
+    if (err == ESP_OK)
+    {
+        global_topic = malloc(required_size);
+        err = nvs_get_str(*mqtt_nvs_hnd_ptr, "MQTT_TOPIC", global_topic, &required_size);
+        if (err == ESP_OK)
+        {
+            ESP_LOGI(TAG, "Topic almacenado en NVS = %s", global_topic);
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Error obteniendo Device TOPIC MQTT desde NVS. %s \n"
+                          "Usando URL por defecto configurada con MenuConfig %s",
+                     esp_err_to_name(err), CONFIG_BROKER_URL);
+
+            free(global_topic); // Liberar memoria del antiguo malloc
+
+            required_size = snprintf(NULL, 0, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
+            if (required_size < 0)
+            {
+                ESP_LOGE(TAG, "Error al crear el topic de publicacion");
+            }
+            else
+            {
+                global_topic = malloc(required_size + 1);
+                if (global_topic != NULL)
+                {
+                    snprintf(global_topic, required_size + 1, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
+                    ESP_LOGI(TAG, "Topic de publicaciones del telefonillo: %s", global_topic);
+                }
+            }
+        }
+    }
+    else if (err == ESP_ERR_NVS_NOT_FOUND)
+    {
+        ESP_LOGE(TAG, "Topic del device no provisionada por SoftAP!\n"
+                      "Provisione de nuevo con el parametro --customdata \"topic\" para usar un topic diferente\n"
+                      "Usando URL por defecto %s:%d",
+                 CONFIG_BROKER_URL,
+                 CONFIG_BROKER_PORT);
+
+        required_size = snprintf(NULL, 0, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
+        if (required_size < 0)
+        {
+            ESP_LOGE(TAG, "Error al crear el topic de publicacion");
+        }
+        else
+        {
+            global_topic = malloc(required_size + 1);
+            if (global_topic != NULL)
+            {
+                snprintf(global_topic, required_size + 1, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
+                ESP_LOGI(TAG, "Topic de publicaciones del telefonillo: %s", global_topic);
+            }
+        }
+    }
+    else
+    { // Otro error, notificar
+        ESP_LOGE(TAG, "Error leyendo clave MQTT_DEVICE_TOPIC de la NVS: %s", esp_err_to_name(err));
+    }
+}
+
+void Mqtt_client_start(nvs_handle_t *nvs_hnd)
+{
+    esp_err_t err = ESP_OK;
+    size_t required_size = 0;
+
+    mqtt_nvs_hnd_ptr = nvs_hnd;
+
+    ESP_LOGI(TAG, "Iniciando cliente MQTT....");
+
+    // Obtener URL del Broker desde la NVS si se indicó por provisionamiento SoftAP
+    get_broker_url();
+    get_broker_port();
 
     esp_mqtt_client_config_t mqtt_cfg = {};
     mqtt_cfg.broker.address.uri = global_broker_url;
-    mqtt_cfg.broker.address.port = CONFIG_BROKER_PORT;
+    mqtt_cfg.broker.address.port = global_port;
     mqtt_cfg.buffer.out_size = 15360;
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
@@ -104,20 +197,8 @@ void Mqtt_client_start(nvs_handle_t *nvs_hnd)
     esp_mqtt_client_start(mqtt_client);
 
     // *** Crear el topic para enviar los datos del nodo ***
-    required_size = snprintf(NULL, 0, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
-    if (required_size < 0)
-    {
-        ESP_LOGE(TAG, "Error al crear el topic de publicacion");
-    }
-    else
-    {
-        global_topic = malloc(required_size + 1);
-        if (global_topic != NULL)
-        {
-            snprintf(global_topic, required_size + 1, BASE_TOPIC, CONFIG_ALARM_TOPIC, CONFIG_DEVICE_NAME);
-            ESP_LOGI(TAG, "Topic de publicaciones del telefonillo: %s", global_topic);
-        }
-    }
+    get_device_topic();
+    
 
     ESP_LOGI(TAG, "MQTT client started");
 }

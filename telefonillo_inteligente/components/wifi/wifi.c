@@ -61,12 +61,13 @@ esp_err_t custom_prov_data_handler(uint32_t session_id, const uint8_t *inbuf, ss
     if (inbuf)
     {
         esp_err_t errcode = ESP_OK;
+
         ESP_LOGI(TAG, "Received data: %.*s", inlen, (char *)inbuf);
         mqtt_broker_url = malloc(inlen + 1); // Se guardan los datos añadidos como custom_data en la variable nombre_dispositivo
         memcpy(mqtt_broker_url, inbuf, inlen);
         mqtt_broker_url[inlen] = '\0';
-
-        if ((errcode = nvs_set_str((*wifi_nvs_hnd_ptr), "MQTT_BROKER_URL", mqtt_broker_url) != ESP_OK))
+        errcode = nvs_set_str((*wifi_nvs_hnd_ptr), "MQTT_BROKER_URL", mqtt_broker_url);
+        if (errcode != ESP_OK)
             ESP_LOGE(TAG, "Error writing Broker URL on NVS. %s", esp_err_to_name(errcode));
         else
         {
@@ -76,6 +77,75 @@ esp_err_t custom_prov_data_handler(uint32_t session_id, const uint8_t *inbuf, ss
                 ESP_LOGE(TAG, "Error commiting Broker URL on NVS. %s.", esp_err_to_name(errcode));
         }
         free(mqtt_broker_url);
+    }
+
+    char response[] = "SUCCESS";
+    *outbuf = (uint8_t *)strdup(response);
+    if (*outbuf == NULL)
+    {
+        ESP_LOGE(TAG, "System out of memory");
+        return ESP_ERR_NO_MEM;
+    }
+    *outlen = strlen(response) + 1; /* +1 for NULL terminating byte */
+
+    return ESP_OK;
+}
+
+esp_err_t mqtt_port_prov_data_handler(uint32_t session_id, const uint8_t *inbuf, ssize_t inlen,
+                                      uint8_t **outbuf, ssize_t *outlen, void *priv_data)
+{
+    esp_err_t errcode = ESP_OK;
+    if (inbuf)
+    {
+        ESP_LOGI(TAG, "Received data: %.*s", inlen, (char *)inbuf);
+        int port = atoi((char *)inbuf);
+        errcode = nvs_set_i32((*wifi_nvs_hnd_ptr), "MQTT_PORT", port);
+        if (errcode != ESP_OK)
+            ESP_LOGE(TAG, "Error writing Broker PORT on NVS. %s", esp_err_to_name(errcode));
+        else
+        {
+            if ((errcode = nvs_commit((*wifi_nvs_hnd_ptr))) == ESP_OK)
+                ESP_LOGI(TAG, "Broker PORT correctly saved on NVS");
+            else
+                ESP_LOGE(TAG, "Error commiting Broker URL on NVS. %s.", esp_err_to_name(errcode));
+        }
+    }
+
+    char response[] = "SUCCESS";
+    *outbuf = (uint8_t *)strdup(response);
+    if (*outbuf == NULL)
+    {
+        ESP_LOGE(TAG, "System out of memory");
+        return ESP_ERR_NO_MEM;
+    }
+    *outlen = strlen(response) + 1; /* +1 for NULL terminating byte */
+
+    return ESP_OK;
+}
+
+esp_err_t mqtt_topic_prov_data_handler(uint32_t session_id, const uint8_t *inbuf, ssize_t inlen,
+                                       uint8_t **outbuf, ssize_t *outlen, void *priv_data)
+{
+
+    esp_err_t errcode = ESP_OK;
+    if (inbuf)
+    {
+        ESP_LOGI(TAG, "Received data: %.*s", inlen, (char *)inbuf);
+
+        char *topic = malloc(sizeof(char) * inlen + 1);
+        memcpy(topic, inbuf, inlen);
+        topic[inlen] = '\0';
+        errcode = nvs_set_str((*wifi_nvs_hnd_ptr), "MQTT_TOPIC", topic) ;
+        if (errcode!= ESP_OK)
+            ESP_LOGE(TAG, "Error writing Device TOPIC on NVS. %s", esp_err_to_name(errcode));
+        else
+        {
+            if ((errcode = nvs_commit((*wifi_nvs_hnd_ptr))) == ESP_OK)
+                ESP_LOGI(TAG, "Broker URL correctly saved on NVS");
+            else
+                ESP_LOGE(TAG, "Error commiting Device TOPIC on NVS. %s.", esp_err_to_name(errcode));
+        }
+        free(topic);
     }
 
     char response[] = "SUCCESS";
@@ -343,11 +413,14 @@ esp_err_t wifi_init(nvs_handle_t *nvs_hnd)
         const char *service_key = NULL;
 
         wifi_prov_mgr_endpoint_create("custom-data");
+        wifi_prov_mgr_endpoint_create("mqtt-port");
 
         /* Start provisioning service */
         wifi_prov_mgr_start_provisioning(security, (const void *)sec_params, service_name, service_key);
 
-        wifi_prov_mgr_endpoint_register("custom-data", custom_prov_data_handler, NULL);
+        ESP_ERROR_CHECK(wifi_prov_mgr_endpoint_register("custom-data", custom_prov_data_handler, NULL));
+        ESP_ERROR_CHECK(wifi_prov_mgr_endpoint_register("mqtt-port", mqtt_port_prov_data_handler, NULL));
+        ESP_ERROR_CHECK(wifi_prov_mgr_endpoint_register("mqtt-topic", mqtt_topic_prov_data_handler, NULL));
 
         wifi_prov_print_info(service_name, pop, PROV_TRANSPORT_SOFTAP);
 

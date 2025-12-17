@@ -1,3 +1,5 @@
+#ifndef LCD_S3_H_
+#define LCD_S3_H_
 #pragma once
 #include "esp_err.h"
 
@@ -18,3 +20,5 @@ esp_err_t lcd_s3_eye_init(void);
  * @param jpg_len Longitud del buffer JPEG (fb->len)
  */
 esp_err_t lcd_s3_eye_draw_jpeg(const uint8_t *jpg_data, size_t jpg_len);
+
+#endif

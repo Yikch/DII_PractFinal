@@ -1,0 +1,51 @@
+// build.gradle (RESTAURADO y CORREGIDO)
+
+// ESTE BLOQUE DEBE IR AL PRINCIPIO
+plugins {
+    id("io.quarkus") version "3.30.3"
+    id 'java'
+    // Añade cualquier otro plugin que necesites aquí
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-messaging-mqtt'
+    implementation 'io.smallrye.reactive:smallrye-reactive-messaging-provider'
+    implementation 'io.quarkus:quarkus-resteasy-client'
+    implementation 'io.quarkus:quarkus-resteasy-jackson'
+    implementation 'io.quarkus:quarkus-scheduler'
+    implementation 'io.quarkiverse.jdbc:quarkus-jdbc-sqlite:3.0.11'
+    implementation 'io.quarkus:quarkus-arc'
+    implementation "io.quarkus:quarkus-resteasy-multipart"
+    implementation "io.quarkus:quarkus-smallrye-health"
+    implementation 'com.twelvemonkeys.imageio:imageio-jpeg:3.10.1'
+    implementation 'com.twelvemonkeys.imageio:imageio-core:3.10.1'
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+}
+
+group = 'alertador.videoportero.telegram'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+    jvmArgs "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+}
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}

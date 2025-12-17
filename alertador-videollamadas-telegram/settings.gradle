@@ -1,0 +1,17 @@
+// settings.gradle (CORRECCIÓN FINAL)
+
+// Paso 1: Corregir la sintaxis. pluginManagement DEBE ir primero.
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        mavenLocal()
+    }
+    plugins {
+        // Paso 2: Definir el ID del plugin (io.quarkus) y usar la variable de versión.
+        id 'io.quarkus' version "${quarkusPluginVersion}"
+        // id "${quarkusPluginId}" version "${quarkusPluginVersion}"
+    }
+}
+
+rootProject.name='alertador-videoportero-telegram'

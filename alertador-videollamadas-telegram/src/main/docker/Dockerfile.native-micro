@@ -1,0 +1,54 @@
+FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:23.1-jdk-21 as builder-gradle
+
+USER root
+
+RUN microdnf install -y findutils \ 
+    && microdnf install -y zlib
+
+USER quarkus
+
+WORKDIR /application
+
+ENV HOME=/application                     \
+    QUARKUS_PROFILE=native                \
+    GRADLE_VERSION=9.2.1                  \
+    GRADLE_HASH=2lbhfocpgk6niea1fja7mj8kz  
+
+RUN mkdir -p /application/gradle                                                                       \ 
+    && mkdir -p /application/src                                                                       \
+    && mkdir -p /home/quarkus/.gradle/wrapper/dists/gradle-${GRADLE_VERSION}-all/${GRADLE_HASH}
+
+COPY --chown=quarkus:quarkus ./gradle-${GRADLE_VERSION}-all           \
+     /home/quarkus/.gradle/wrapper/dists/gradle-${GRADLE_VERSION}-all
+
+COPY --chown=quarkus:quarkus gradlew /application/
+COPY --chown=quarkus:quarkus gradle /application/gradle
+COPY --chown=quarkus:quarkus build.gradle settings.gradle gradle.properties /application/
+COPY --chown=quarkus:quarkus src /application/src
+
+RUN chmod +x ./gradlew                                             \
+    && ./gradlew clean build -Dquarkus.package.type=native -x test
+
+FROM quay.io/quarkus/quarkus-micro-image:2.0
+
+WORKDIR /application
+
+ENV HOME=/application
+
+COPY --from=builder-gradle /application/build/*-runner /application/runner
+
+COPY --from=builder-gradle /application/src/main/resources/application-native.properties /application/config/application.properties
+
+ENV QUARKUS_CONFIG_LOCATIONS=/application/config/application.properties
+
+RUN mkdir /application/db                                       \
+    && touch /application/db/image-thumbnail-cache.db           \
+    && chown 1001:1001 /application/db                          \
+    && chown 1001:1001 /application/db/image-thumbnail-cache.db \
+    && chmod +rw /application/db/image-thumbnail-cache.db
+
+EXPOSE 8080
+
+USER 1001
+
+CMD /application/runner -Dquarkus.http.host=0.0.0.0

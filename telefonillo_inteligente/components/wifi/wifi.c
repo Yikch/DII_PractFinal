@@ -414,6 +414,7 @@ esp_err_t wifi_init(nvs_handle_t *nvs_hnd)
 
         wifi_prov_mgr_endpoint_create("custom-data");
         wifi_prov_mgr_endpoint_create("mqtt-port");
+        wifi_prov_mgr_endpoint_create("mqtt-topic");
 
         /* Start provisioning service */
         wifi_prov_mgr_start_provisioning(security, (const void *)sec_params, service_name, service_key);

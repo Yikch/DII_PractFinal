@@ -1,0 +1,131 @@
+# mosquitto-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+data:
+  mosquitto.conf: |
+    # -----------------------------------------------------------------
+    # CONFIGURACIÓN INTERNA / INSEGURA (Para Quarkus)
+    # -----------------------------------------------------------------
+    listener 1883
+    allow_anonymous true # CAMBIAR si se requiere autenticación interna
+    
+    # -----------------------------------------------------------------
+    # CONFIGURACIÓN EXTERNA / SEGURA (Para Clientes Externos)
+    # -----------------------------------------------------------------
+    listener 8883
+    cafile /mosquitto/config/certs/ca.crt
+    certfile /mosquitto/config/certs/server.crt
+    keyfile /mosquitto/config/certs/server.key
+    tls_version tlsv1.2
+    # require_certificate true # Opcional: Requiere certificado del cliente
+---
+# mosquitto-secret.yaml (EJEMPLO - REEMPLAZA CON TUS VALORES BASE64)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mosquitto-tls-certs
+type: Opaque
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNjekNDQWhtZ0F3SUJBZ0lVTmV0Szdtem44ZHZibTFFT0dYRkFkM0puVHlNd0NnWUlLb1pJemowRUF3SXcKZ1k0eEN6QUpCZ05WQkFZVEFrVlRNUTh3RFFZRFZRUUlEQVpOWVdSeWFXUXhEekFOQmdOVkJBY01CazFoWkhKcApaREVWTUJNR0ExVUVDZ3dNZG1sa1pXOXdiM0owWlhKdk1Rd3dDZ1lEVlFRTERBTlZRMDB4R2pBWUJnTlZCQU1NCkVYSmhjM0JpWlhKeWVYQnBMbXh2WTJGc01Sd3dHZ1lKS29aSWh2Y05BUWtCRmcxbWRtbHVZWE5BZFdOdExtVnoKTUI0WERUSTFNVEl4TXpBNU16RXhNMW9YRFRNMU1USXhNVEE1TXpFeE0xb3dnWTR4Q3pBSkJnTlZCQVlUQWtWVApNUTh3RFFZRFZRUUlEQVpOWVdSeWFXUXhEekFOQmdOVkJBY01CazFoWkhKcFpERVZNQk1HQTFVRUNnd01kbWxrClpXOXdiM0owWlhKdk1Rd3dDZ1lEVlFRTERBTlZRMDB4R2pBWUJnTlZCQU1NRVhKaGMzQmlaWEp5ZVhCcExteHYKWTJGc01Sd3dHZ1lKS29aSWh2Y05BUWtCRmcxbWRtbHVZWE5BZFdOdExtVnpNRmt3RXdZSEtvWkl6ajBDQVFZSQpLb1pJemowREFRY0RRZ0FFWTRyQXhGZTZBVUNrVDBwUlRiQ2U3YWczSnNyeGJzZVROa0ZyUi9ndXZZWnJrcTlPCnhmaVllajFGaE9XTHA2UEY1UTRPaFhSV2NtSS83MEpNcHhqUlFhTlRNRkV3SFFZRFZSME9CQllFRlBYamRCYzYKMjh6anZQWE9IVFo3VUZ1R2RsZWpNQjhHQTFVZEl3UVlNQmFBRlBYamRCYzYyOHpqdlBYT0hUWjdVRnVHZGxlagpNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdDZ1lJS29aSXpqMEVBd0lEU0FBd1JRSWhBSmI3VXdOdFRTK2EwTHFQCldvUjVPSWtsbGxVK1NGTEE1OWJTL0ZvN24vcUVBaUJzalNNT1FqQUFFQzZpK0l1TlVSMWNyeDYvbnRhUGxLNUoKdTN4cnZVajZLQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K 
+  server.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROakNDQXR5Z0F3SUJBZ0lVT2dnamFPSHh2ZHVnTVI4cTFXVVJoTUZsa0Zjd0NnWUlLb1pJemowRUF3SXcKZ1k0eEN6QUpCZ05WQkFZVEFrVlRNUTh3RFFZRFZRUUlEQVpOWVdSeWFXUXhEekFOQmdOVkJBY01CazFoWkhKcApaREVWTUJNR0ExVUVDZ3dNZG1sa1pXOXdiM0owWlhKdk1Rd3dDZ1lEVlFRTERBTlZRMDB4R2pBWUJnTlZCQU1NCkVYSmhjM0JpWlhKeWVYQnBMbXh2WTJGc01Sd3dHZ1lKS29aSWh2Y05BUWtCRmcxbWRtbHVZWE5BZFdOdExtVnoKTUI0WERUSTFNVEl4TXpBNU16STBORm9YRFRJMk1USXhNekE1TXpJME5Gb3dnWmN4Q3pBSkJnTlZCQVlUQWtWVApNUTh3RFFZRFZRUUlEQVpOWVdSeWFXUXhEekFOQmdOVkJBY01CazFoWkhKcFpERVZNQk1HQTFVRUNnd01kbWxrClpXOXdiM0owWlhKdk1SVXdFd1lEVlFRTERBeDJhV1JsYjNCdmNuUmxjbTh4R2pBWUJnTlZCQU1NRVhKaGMzQmkKWlhKeWVYQnBMbXh2WTJGc01Sd3dHZ1lKS29aSWh2Y05BUWtCRmcxbWRtbHVZWE5BZFdOdExtVnpNSUlCSWpBTgpCZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF4b2syLzVmZ0hmTGFYL2k4NVl0ZmdYcHIxc2JWCkZPNTJhY25xSTFIY1lmb3R4TTc1Qm9CcHdab3FnQTVxNFgyRmhmbzRpd1g1VVI3Q3dhdHZWQkVIbXRzdnB1ZzQKbFN5UGMrM3h3V3BaZDlsak9MMm9yMkVNMWJnUkpnMzFOdlE4K09VdWN5b3lnZ3JXSlV3NEUreWJ0eC9EQllXQgpiSlVaZTR5QXpFVDZWa0wzQ0lpU0VkQzB1WTdTTy9HSVd5dGY3QXYrbkt0RG42Vmw3K210b25tcU9mVGNJaGxHCm8yamd1eHdacFVhK25zTUNhTDd2MVhuT1NRNWdwWXEvcndMYzh1UmRMMk92Zk1UaFRsTnZYQUlHMUhVQUY5aXAKZUl2eFJ3ck9FUmNPWkVFdGI5eEFmZVU2RzlqYTNXZ0NXWFhVMXhXd3RBdklhT090ck9VR040bUkrd0lEQVFBQgpvMEl3UURBZEJnTlZIUTRFRmdRVUt2Y1hwRVdqWDkwQlR0V0pEbHVrNnczNXhsUXdId1lEVlIwakJCZ3dGb0FVCjllTjBGenJiek9PODljNGRObnRRVzRaMlY2TXdDZ1lJS29aSXpqMEVBd0lEU0FBd1JRSWdNUGZDc3VGSXJpcFoKYTZHSWZPYUc4OUp2UGpLMGpYZmRIVXpFblR4dXFCc0NJUURNN05MZWd2cmJGTThsQ2dIaWFKRmJ3QXZsZkhJZwpqZkF0ZkF5bTNONHQzQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K 
+  server.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRREdpVGIvbCtBZDh0cGYKK0x6bGkxK0JlbXZXeHRVVTduWnB5ZW9qVWR4aCtpM0V6dmtHZ0duQm1pcUFEbXJoZllXRitqaUxCZmxSSHNMQgpxMjlVRVFlYTJ5K202RGlWTEk5ejdmSEJhbGwzMldNNHZhaXZZUXpWdUJFbURmVTI5RHo0NVM1ektqS0NDdFlsClREZ1Q3SnUzSDhNRmhZRnNsUmw3aklETVJQcFdRdmNJaUpJUjBMUzVqdEk3OFloYksxL3NDLzZjcTBPZnBXWHYKNmEyaWVhbzU5TndpR1VhamFPQzdIQm1sUnI2ZXd3Sm92dS9WZWM1SkRtQ2xpcit2QXR6eTVGMHZZNjk4eE9GTwpVMjljQWdiVWRRQVgyS2w0aS9GSENzNFJGdzVrUVMxdjNFQjk1VG9iMk5yZGFBSlpkZFRYRmJDMEM4aG80NjJzCjVRWTNpWWo3QWdNQkFBRUNnZ0VBQ3dNKzVFRFZJemRZU3FueGFVTm95ZWp6MGMyWDVOblhhUktoZmxIY2I4SjYKazZmaGNDMWpJNWZKdVlnZ0FKL1pJWWtaekc3SmY3VzlOSHJIcWFCcU02MkVRRUtZWG9CY1g0YVNFOENZODY5MApBTlU5TXFlblpSc1pONTU0eWNXdVRpWWF0NW9SaENvaXQ5RWYwczJDT2h3Yk9HQkpqaFlPeVJyMHl6bURGcEgyCldDZ051Y29ERHo2UmV6UElDM3p0VUNrYnQxTndKUEt0blRGakhDK2I3VG0rQnB1bVRKOEhnYlhIbFdjMWpQczEKTTYyR1lzNEtRK3hwT0FCb0dOOTZlWXYwblgrRUZVdWkzTGp3d2dLbXorVHRXUTQ5bC9yM0p0RWNNNEJYcXFqZApqeWhvWnMxMUxoZTQwaDlEa3RHNUZjV1pIMWRaNGJwcVlTN0ZncUsvN1FLQmdRRGxKdE05N2RVaGllSWFpZnU0CjAyUUdKOVNIN2dYNjdzU0oyOGdMTC9tNy9mOUowaE9kVGhFRjFPNDRIU0lMV21Rc0NCMUlKQnR6SWdLajZ1emQKcE5iU1FxRmhLWnRVVUhiYWEySTFnc2RQUFhIRGJoQjdnV0ZZNDdTTlNaZ0NzcnJkMGlOU0JUMG1md1d5ckhMVQp0TllvdjZZYzMydkhxMWVQTHNGUk5KbDlId0tCZ1FEZHpCcDVtN3pCbitpNG5ObkplQ1cyMUFLdlhJRFVUUDRBCm5XakNWN2VwRzE3c2xwZWl3K011SmNpNDVLNysxOWRWMVN6NGZjaWRwVzV0d0ZxdVFQMDVCOUlMN1VSY2NKanEKUnd1RDd6cGtRZ3BXNVdhZGlkV1JNd2YxU1orWXFVaCtsY0tZbVlaVFF5RkdDK1Y5Si9qemY1YlBKbTFzMmdFbQppcnZ2andPY3BRS0JnQURrUU1ncDU3MWtxdk9OZStSQk5rOXIwa0RoSlRiUHZRWUlTK1AzUU5LQmIzL2JDR2FCClNrR3FqVzY4ZGtoekJwYkJSVlBsaUJIUG5SRUVOZjI2eVhjeCtTekdtNnNkVVFrU2grUkxhUGtlOVJWY2xVWFYKd0FvM2dKbFlJdlpIdWNCcE0rZjZ5ejBlRzJpUmtUVFFxMUNuUmo4d2cxdlloOU92eStMRUFLRGpBb0dBYWZyRAp6OFhWcktOUEhSOTloU0lPeTB5RXQrdzRkcmtQU1pYdFg2ZHdUN0tQYWZjUEg2d0FHcVhkUWxPck5vUkdGWEpXCkdhcG91TU02ZitEQXM3REVEb01wSDUvUTRXYS8rbm5XQzhXOG5mbGNYV2NoNERialFJMGt5VlRUbUt1U3cwR20KQ1NxYW42QmMvczVpYXFvMTc0dlFzTXpJenBGZ3FWenpMaVdrOFMwQ2dZQkV6WmUwSHVmelB5QzQyazlDRzdYSgpKdDNyZDVQSXhwUDVvcVg5SFdzR1c0dVhBdzFObXhsOGdneS91NGR6VlY3R0l2WTg0QzJKOFNJbzRTdTV5bWZLCnJUSkcwTWhIMXhyWGd4c21yRzB3WlA1ZlhhMXFaNTBPZkR5WW55aldrdDU1MFBqU3JjdnlQdkNvRlNQMnAxQmIKSjVEbXRTaGV5RmtOOGJBWllGR244QT09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K 
+---
+# mosquitto-deployment.yaml (COMPLETO)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto-deployment
+  labels:
+    app: mosquitto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      #initContainers:
+      # - name: fix-permissions
+      #   image: busybox
+      #   command:
+      #   - "sh"
+      #   - "-c"
+      #   - |
+      #     # Crear el grupo y usuario 'mosquitto' si no existen
+      #     addgroup -S mosquitto && adduser -S mosquitto -G mosquitto
+      #     # Cambiar los permisos de los archivos para el usuario 'mosquitto'
+      #     chown -R mosquitto:mosquitto /mosquitto
+      #   volumeMounts:
+      #   - name: mosquitto-config-volume
+      #     mountPath: /mosquitto/config/mosquitto.conf
+      #   - name: mosquitto-certs-volume
+      #     mountPath: /mosquitto/config/certs
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2.0.18
+          ports:
+            - containerPort: 1883 # Inseguro
+            - containerPort: 8883 # Seguro (TLS)
+          # Monta el archivo de configuración y los certificados
+          volumeMounts:
+            # 1. Monta el ConfigMap como archivo de configuración
+            - name: mosquitto-config-volume
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+              readOnly: false
+            # 2. Monta los certificados TLS
+            - name: mosquitto-certs-volume
+              mountPath: /mosquitto/config/certs
+              readOnly: false
+      
+      # Define los volúmenes
+      volumes:
+        # 1. Volumen para el archivo de configuración (desde ConfigMap)
+        - name: mosquitto-config-volume
+          configMap:
+            name: mosquitto-config
+        # 2. Volumen para los certificados (desde Secret)
+        - name: mosquitto-certs-volume
+          secret:
+            secretName: mosquitto-tls-certs
+---
+# mosquitto-internal-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto-internal-svc # <-- Usado por Quarkus: tcp://mosquitto-internal-svc:1883
+  labels:
+    app: mosquitto
+spec:
+  selector:
+    app: mosquitto
+  ports:
+    - name: mqtt-insecure
+      protocol: TCP
+      port: 1883       
+      targetPort: 1883 
+  type: ClusterIP # Solo accesible dentro del clúster
+---
+# mosquitto-external-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto-external-svc
+  labels:
+    app: mosquitto
+spec:
+  type: NodePort 
+  selector:
+    app: mosquitto
+  ports:
+    - name: mqtt-secure
+      protocol: TCP
+      port: 1883       # Puerto del Service (interno)
+      targetPort: 1883 # Puerto del Contenedor
+      nodePort: 31860
+---

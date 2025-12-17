@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertador-videollamadas-telegram-pvc 
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertador-videollamadas-telegram 
+  labels:
+    app: alertador-videollamadas-telegram 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertador-videollamadas-telegram 
+  template:
+    metadata:
+      labels:
+        app: alertador-videollamadas-telegram 
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+      - name: alertador-contenedor
+        image: localhost:5000/alertador-videollamadas-telegram:arm64
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080 
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m" # 0.5 CPU
+        volumeMounts:
+        - name: alertador-videollamadas-telegram-sqlite
+          mountPath: /application/db
+      volumes:
+      - name: alertador-videollamadas-telegram-sqlite
+        persistentVolumeClaim:
+          claimName: alertador-videollamadas-telegram-pvc

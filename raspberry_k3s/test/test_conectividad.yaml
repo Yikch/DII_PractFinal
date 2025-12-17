@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl-diagnostico
+  namespace: default # O tu namespace de la aplicación
+spec:
+  containers:
+  - name: diagnostico
+    image: curlimages/curl:latest # Una imagen ideal que incluye curl
+    # Sobrescribe el comando por defecto para mantener el Pod vivo
+    # El 'tail -f /dev/null' lo mantiene en ejecución para que puedas hacer 'kubectl exec'
+    command: ["/bin/sh", "-c"]
+    args: ["sleep 3600"] # O tail -f /dev/null
